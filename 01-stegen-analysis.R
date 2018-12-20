@@ -120,3 +120,59 @@ plot(i_ill, border = "grey40", show_cases = TRUE, color = c("non case" = "#66cc9
   theme(legend.position = c(x = 0.7, y = 0.8)) + # places the legend inside the plot
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) + # sets the dates along the x axis at a 45 degree angle
   coord_equal() # makes each case appear as a box
+
+## Looking at distribution of cases by gender using graph
+
+ggplot(stegen) + 
+  geom_histogram(aes(x = age, fill = ill), binwidth = 1) +
+  scale_fill_manual("Illness", values = c("non case" = "#66cc99", "case" = "#993333")) +
+  facet_wrap(~sex, ncol = 1) + # stratify the sex into a single column of panels
+  labs(title = "Cases by age and gender") + 
+  theme_light()
+
+
+## Looking for the food that highly associated with the outbreak
+
+stegen <- readRDS(stegen_clean_rds)
+head(stegen)
+names(stegen)
+food <- c('tiramisu', 'wmousse', 'dmousse', 'mousse', 'beer', 'redjelly',
+          'fruit_salad', 'tomato', 'mince', 'salmon', 'horseradish',
+          'chickenwin', 'roastbeef', 'pork') 
+food
+stegen[food]
+
+
+pork_table <- epitable(stegen$pork, stegen$ill)
+pork_table
+
+pork_rr <- riskratio(pork_table, correct = T, method = "wald")
+pork_rr
+pork_rr$measure
+pork_est_ci <- pork_rr$measure[2, ]
+pork_est_ci
+
+pork_p <- pork_rr$p.value[2, "fisher.exact"]
+pork_p
+
+res <- data.frame(estimate = pork_est_ci["estimate"],
+                  lower    = pork_est_ci["lower"],
+                  upper    = pork_est_ci["upper"],
+                  p.value  = pork_p
+)
+res
+
+
+## Testing association between age and illness
+
+bartlett.test(stegen$age ~ stegen$ill)
+t.test(stegen$age ~ stegen$ill, var.equal = TRUE)
+
+
+## Testing association between illness and gender
+
+tab_sex_ill <- table(stegen$sex, stegen$ill)
+tab_sex_ill
+prop.table(tab_sex_ill)
+round(100 * prop.table(tab_sex_ill))
+chisq.test(tab_sex_ill)
