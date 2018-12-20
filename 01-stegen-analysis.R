@@ -89,8 +89,10 @@ tapply(stegen$age, INDEX = stegen$sex, FUN = mean, na.rm = T)
 
 ### Using graph to explore data 
 
-ggplot(stegen) + geom_histogram(aes(x = age), binwidth = 1)
-ggplot(stegen) + geom_histogram(aes(x = age, fill = sex), binwidth = 1)
+ggplot(stegen) + 
+  geom_histogram(aes(x = age), binwidth = 1)
+ggplot(stegen) + 
+  geom_histogram(aes(x = age, fill = sex), binwidth = 1)
 
 ggplot(stegen) + 
   geom_histogram(aes(x = age, fill = sex), binwidth = 1, color = "white") +
