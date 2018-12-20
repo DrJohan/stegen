@@ -77,3 +77,44 @@ write_csv(stegen, path = stegen_clean_file)
 
 stegen_clean_rds <- here("data", "cleaned", "stegen-clean.rds")
 saveRDS(stegen, file = stegen_clean_rds)
+
+
+## Data exploration and summary
+
+summary(stegen$age)
+summary(stegen$sex)
+tapply(stegen$age, INDEX = stegen$sex, FUN = summary)
+tapply(stegen$age, INDEX = stegen$sex, FUN = mean, na.rm = T)
+
+
+### Using graph to explore data 
+
+ggplot(stegen) + geom_histogram(aes(x = age), binwidth = 1)
+ggplot(stegen) + geom_histogram(aes(x = age, fill = sex), binwidth = 1)
+
+ggplot(stegen) + 
+  geom_histogram(aes(x = age, fill = sex), binwidth = 1, color = "white") +
+  scale_fill_manual(values = c(male = "#4775d1", female = "#cc6699")) +
+  labs(title = "Age distribution by gender", x = "Age (years)", y = "Number of cases") +
+  theme_light(base_family = "Times", base_size = 16) +
+  theme(legend.position = c(0.8, 0.8))
+
+## Calculating incidence using epicurves
+
+i <- incidence(stegen$date_onset)
+i
+plot(i)
+as.data.frame(i)
+
+
+i_ill <- incidence(stegen$date_onset, group = stegen$ill)
+i_ill
+as.data.frame(i_ill)
+plot(i_ill, color = c("non case" = "#66cc99", "case" = "#993333"))
+
+plot(i_ill, border = "grey40", show_cases = TRUE, color = c("non case" = "#66cc99", "case" = "#993333")) + 
+  labs(title = "Epicurve by case", x = "Date of onset", y = "Number of cases") +
+  theme_light(base_family = "Times", base_size = 16) + # changes the overal theme
+  theme(legend.position = c(x = 0.7, y = 0.8)) + # places the legend inside the plot
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) + # sets the dates along the x axis at a 45 degree angle
+  coord_equal() # makes each case appear as a box
