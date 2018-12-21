@@ -176,3 +176,96 @@ tab_sex_ill
 prop.table(tab_sex_ill)
 round(100 * prop.table(tab_sex_ill))
 chisq.test(tab_sex_ill)
+
+
+## Writing a function for consolidating several steps into one simple step
+
+et <- epitable(stegen$pork, stegen$ill)
+rr <- riskratio(et)
+estimate <- rr$measure[2,]
+res <- data.frame(estimate = estimate["estimate"],
+                  lower    = estimate["lower"],
+                  upper    = estimate["upper"],
+                  p.value  = rr$p.value[2, "fisher.exact"]
+                  )
+res
+
+### The risk ratio function
+
+srr <- function(exposure, outcome){
+  et <- epitable(exposure, outcome)
+  rr <- riskratio(et)
+  estimate <- rr$measure[2,]
+  res <- data.frame(estimate = estimate["estimate"],
+                    lower    = estimate["lower"],
+                    upper    = estimate["upper"], 
+                    p.value  = rr$p.value[2, "fisher.exact"]
+                    )
+  return(res)
+  
+}
+
+
+## Testing the new function that just created
+
+pork_rr <- srr(stegen$pork, stegen$ill)
+pork_rr
+fruit_rr <- srr(stegen$fruit_salad, stegen$ill)
+fruit_rr
+bind_rows(pork = pork_rr, fruit = fruit_rr, .id = "exposure")
+
+
+## Calculating all the risk ratio for all the potential cause using lapply and srr function 
+
+all_rr <- lapply(stegen[food], FUN = srr, outcome = stegen$ill)
+head(all_rr)
+
+all_food_df <- bind_rows(all_rr, .id = "exposure")
+all_food_df
+all_food_df <- arrange(all_food_df, desc(estimate))
+all_food_df
+
+## Plotting the data farme using ggplot2
+
+all_food_df$exposure <- factor(all_food_df$exposure, unique(all_food_df$exposure))
+
+p <- ggplot(all_food_df, aes(x = estimate, y = exposure, color = p.value)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = lower, xmax = upper)) +
+  geom_vline(xintercept = 1, linetype = 2) + 
+  scale_x_log10() + 
+  scale_color_viridis_c(trans = "log10") + 
+  labs(x = "Risk Ratio (log scale)", 
+       y = "Exposure",
+       title = "Risk Ratio for gastroenteritis in Stegen, Germany")
+p
+
+#Plotting a basic spatial overview of cases
+
+ggplot(stegen) +
+  geom_point(aes(x = longitude, y = latitude, color = ill)) +
+  scale_color_manual("Illness", values = c("non case" = "#66cc99", "case" = "#993333")) +
+  coord_map()
+
+stegen_shp <- read_sf(here("data", "stegen-map", "stegen_households.shp"))
+
+ggplot(stegen) +
+  geom_sf(data = stegen_shp) +
+  geom_point(aes(x = longitude, y = latitude, color = ill)) + 
+  scale_color_manual("Illness", values = c("non case" = "#66cc99", "case" = "#993333")) 
+
+
+## Interactive maps
+
+stegen_sub <- stegen[!is.na(stegen$longitude),]
+lmap <- leaflet()
+lmap <- addTiles(lmap)
+lmap <- setView(lmap, lng = 7.963, lat = 47.982, zoom = 15)
+lmap <- addPolygons(lmap, data = st_transform(stegen_shp,'+proj=longlat +ellps=GRS80'))
+lmap <- addCircleMarkers(lmap, 
+                         label = ~ill, 
+                         color = ~ifelse(ill == "case", "#993333", "#66cc99"), 
+                         stroke = FALSE,
+                         fillOpacity = 0.8,
+                         data = stegen_sub)
+lmap
